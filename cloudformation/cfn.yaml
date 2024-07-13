@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: IAM, Lambda, and S3 Example
+
+Resources:
+  BucketBuildByCFN:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: bucket-will-be-access-by-lambda
+
+  AllowedLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: AllowedLambdaFunction
+      Runtime: python3.9
+      Role: !GetAtt AllowedLambdaRole.Arn
+      Code:
+        S3Bucket: william-upload-test-file-bucket-us-east-1
+        S3Key: handler.zip
+      Handler: handler.lambda_handler
+  AllowedLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: allow-to-create-s3-object
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                  - "s3:PutObjectAcl"
+                Resource: !Sub "arn:aws:s3:::${BucketBuildByCFN}/*"
+  AllowedLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/AllowedLambdaFunction
+      RetentionInDays: 7
+
+  DeniedLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: DeniedLambdaFunction
+      Runtime: python3.9
+      Role: !GetAtt DeniedLambdaRole.Arn
+      Code:
+        S3Bucket: william-upload-test-file-bucket-us-east-1
+        S3Key: handler.zip
+      Handler: handler.lambda_handler
+  DeniedLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  DeniedLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/DeniedLambdaFunction
+      RetentionInDays: 7
